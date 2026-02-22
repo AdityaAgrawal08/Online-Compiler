@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { submitCode, getResult, getLanguages } from "@/lib/api";
 
@@ -13,6 +13,7 @@ type Language = {
 };
 
 export default function Home() {
+  const editorRef = useRef<any>(null);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [language, setLanguage] = useState<string>("");
   const [code, setCode] = useState<string>("");
@@ -46,7 +47,8 @@ export default function Home() {
   async function handleRun() {
     if (!language) return;
 
-    if (code.length > 100000) {
+    const currentCode = editorRef.current?.getValue() ?? code;
+    if (currentCode.length > 100000) {
       setOutput("Code exceeds 100KB limit.");
       return;
     }
@@ -57,7 +59,7 @@ export default function Home() {
     try {
       const submit = await submitCode({
         language,
-        code,
+        code: currentCode,
         inputs: [stdin],
       });
 
@@ -146,6 +148,7 @@ export default function Home() {
           theme="vs-dark"
           onChange={(value) => setCode(value || "")}
           onMount={(editor, monacoInstance) => {
+            editorRef.current = editor;
             editor.addCommand(
               monacoInstance.KeyMod.CtrlCmd |
                 monacoInstance.KeyCode.Enter,
