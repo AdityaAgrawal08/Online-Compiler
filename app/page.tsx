@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import { submitCode, getResult, getLanguages } from "@/lib/api";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 type Language = {
   id: string;
@@ -11,6 +12,98 @@ type Language = {
   description: string;
   example: string;
 };
+
+const matrixTokens = [
+  "0",
+  "1",
+  "<",
+  ">",
+  "[",
+  "]",
+  "{",
+  "}",
+  "(",
+  ")",
+  "|",
+  "/",
+  "\\",
+  "💻",
+  "🐍",
+  "☕",
+  "🐘",
+  "🧠",
+  "🚀",
+  "✨",
+  "🧪",
+  "⚡",
+  "🛠",
+  "🌐",
+  "📦",
+];
+
+const createMatrixStream = () =>
+  Array.from({ length: 36 }, () =>
+    matrixTokens[Math.floor(Math.random() * matrixTokens.length)]
+  ).join("\n");
+
+const matrixStreams = Array.from({ length: 20 }, (_, index) => ({
+  id: index,
+  left: `${index * 5}%`,
+  delay: `${-(Math.random() * 4 + 0.5).toFixed(2)}s`,
+  duration: `${8 + Math.random() * 7}s`,
+  opacity: `${0.18 + Math.random() * 0.28}`,
+  text: createMatrixStream(),
+}));
+
+const progressLines = [
+  "Activating cinematic bridge...",
+  "Rendering briefing frames...",
+  "Calibrating scene lighting...",
+  "Aligning runtime story beats...",
+  "Finalizing transition sequence...",
+];
+
+function LoadingScreen({
+  title,
+  subtitle,
+  actionLabel,
+  actionHandler,
+}: {
+  title: string;
+  subtitle: string;
+  actionLabel?: string;
+  actionHandler?: () => void;
+}) {
+  return (
+    <div className="loading-screen">
+      <div className="loading-shell">
+        <div className="cutscene-header">
+          <span className="cutscene-tag">CUTSCENE</span>
+          <span className="cutscene-divider" />
+          <span className="cutscene-note">Briefing sequence engaged</span>
+        </div>
+        <div className="loader-title">{title}</div>
+        <div className="loader-subtitle">{subtitle}</div>
+        <div className="loader-steps">
+          {progressLines.map((line, index) => (
+            <div key={line} className="loader-step" style={{ animationDelay: `${index * 0.2}s` }}>
+              <span className="loader-bullet">›</span>
+              {line}
+            </div>
+          ))}
+        </div>
+        <div className="loader-bar">
+          <span className="loader-progress" />
+        </div>
+        {actionLabel && actionHandler ? (
+          <button className="loader-action" onClick={actionHandler}>
+            {actionLabel}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const editorRef = useRef<any>(null);
@@ -21,6 +114,7 @@ export default function Home() {
   const [stdin, setStdin] = useState<string>("");
   const [output, setOutput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
+  const { data: session, status } = useSession();
 
   // Load languages from backend
   useEffect(() => {
@@ -99,14 +193,75 @@ export default function Home() {
     setLoading(false);
   }
 
+  if (status === "loading") {
+    return (
+      <LoadingScreen
+        title="Verifying secure session"
+        subtitle="Authenticating your identity with a mission-briefing cutscene..."
+      />
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="signin-page">
+        <div className="matrix-background" aria-hidden="true">
+          {matrixStreams.map((stream) => (
+            <div
+              key={stream.id}
+              className="matrix-column"
+              style={
+                {
+                  left: stream.left,
+                  opacity: stream.opacity,
+                  ["--matrix-duration" as any]: stream.duration,
+                  ["--matrix-delay" as any]: stream.delay,
+                } as React.CSSProperties
+              }
+            >
+              <pre>{stream.text}</pre>
+            </div>
+          ))}
+        </div>
+
+        <div className="signin-panel">
+          <div className="signin-card">
+            <div className="signin-badge">Secure Access</div>
+            <h1>Welcome to the Code Vault</h1>
+            <p className="signin-lead">Sign in with Google to unlock your editor, deploy the compiler matrix, and start building.</p>
+            <div className="language-chip-row">
+              {['💻', '🐍', '☕', '⚛️', '🟨', '📦', '🚀'].map((emoji) => (
+                <span key={emoji} className="lang-chip">{emoji}</span>
+              ))}
+            </div>
+            <button className="signin-button" onClick={() => signIn("google")}>Sign in with Google</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (languages.length === 0) {
-    return <div style={{ padding: 20 }}>Loading languages...</div>;
+    return (
+      <LoadingScreen
+        title="Cutscene engaged"
+        subtitle="A short briefing is masking the load while the compiler world comes online."
+        actionLabel="Abort sequence"
+        actionHandler={() => signOut()}
+      />
+    );
   }
 
   return (
   <div className="container">
     <div className="header">
       <div className="title">Online Compiler</div>
+      <div className="auth-info">
+        <span>Signed in as {session.user?.email}</span>
+        <button onClick={() => signOut()} className="signout-button">
+          Sign out
+        </button>
+      </div>
 
       <div className="controls">
         <select
