@@ -11,3 +11,20 @@ export type RunCodePayload = {
   code: string;
   inputs?: string[];
 };
+
+export type PersistedCodeFile = {
+  id: string;
+  name: string;
+  language: string;
+  code: string;
+  updatedAt?: string;
+};
+
+export type EditorFile = {
+  id: string;
+  dbId?: string;
+  name: string;
+  language: string;
+  code: string;
+  isDirty: boolean;
+};
